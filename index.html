@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mini Museum Exhibit AR</title>
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js"></script>
+  <style>
+    #banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+      padding: 12px; text-align: center; font: bold 18px sans-serif;
+      color: #fff; background: #c0392b;
+    }
+    #banner.found { background: #27ae60; }
+  </style>
+  <script>
+    // 1) Workshop component: tap the ball -> random colour
+    AFRAME.registerComponent('change-color', {
+      init: function () {
+        this.el.addEventListener('click', () => {
+          const colours = ['#e74c3c', '#f1c40f', '#3498db', '#9b59b6', '#2ecc71'];
+          this.el.setAttribute('color', colours[Math.floor(Math.random() * colours.length)]);
+        });
+      }
+    });
+
+    // 2) NEW component: tap the object -> grow / shrink (different behaviour)
+    AFRAME.registerComponent('tap-grow', {
+      schema: { big: { default: 1.8 } },
+      init: function () {
+        this.isBig = false;
+        this.el.addEventListener('click', () => {
+          this.isBig = !this.isBig;
+          const s = this.isBig ? this.data.big : 1;
+          this.el.setAttribute('animation__grow', {
+            property: 'scale', to: `${s} ${s} ${s}`, dur: 300, easing: 'easeOutQuad'
+          });
+        });
+      }
+    });
+
+    // 3) Status banner: found / lost
+    AFRAME.registerComponent('marker-status', {
+      init: function () {
+        const banner = document.getElementById('banner');
+        this.el.addEventListener('markerFound', () => {
+          banner.textContent = 'Marker found - exhibit active!';
+          banner.classList.add('found');
+        });
+        this.el.addEventListener('markerLost', () => {
+          banner.textContent = 'Marker lost - point camera at the Hiro marker';
+          banner.classList.remove('found');
+        });
+      }
+    });
+  </script>
+</head>
+<body style="margin:0; overflow:hidden;">
+  <div id="banner">Marker lost - point camera at the Hiro marker</div>
+
+  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="logarithmicDepthBuffer: true;">
+    <a-marker preset="hiro" marker-status>
+
+      <!-- Plinth (box) with slow rotation -->
+      <a-box position="0 0.25 0" width="1.2" height="0.5" depth="1.2" color="#7f8c8d"
+             animation="property: rotation; to: 0 360 0; loop: true; dur: 12000; easing: linear"></a-box>
+
+      <!-- Tappable ball: colour change + bobbing (position animation) -->
+      <a-sphere class="clickable" change-color position="0 1 0" radius="0.25" color="#e74c3c"
+                animation="property: position; to: 0 1.3 0; dir: alternate; loop: true; dur: 1200; easing: easeInOutSine"></a-sphere>
+
+      <!-- NEW tappable object: grows when tapped -->
+      <a-cylinder class="clickable" tap-grow position="-0.7 0.8 0" radius="0.15" height="0.5" color="#3498db"></a-cylinder>
+
+      <!-- Extra object: cone -->
+      <a-cone position="0.7 0.8 0" radius-bottom="0.2" radius-top="0" height="0.5" color="#f1c40f"></a-cone>
+
+      <!-- 3D model (CC0 Avocado, Khronos sample) -->
+      <a-entity gltf-model="models/Avocado.glb" position="0 0.5 0.7" scale="8 8 8"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear"></a-entity>
+
+      <!-- Label -->
+      <a-text value="Mini Museum Exhibit" align="center" color="#ffffff" position="0 1.8 0" scale="1.5 1.5 1.5"></a-text>
+    </a-marker>
+
+    <!-- Camera with tap raycaster -->
+    <a-entity camera cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
+  </a-scene>
+</body>
+</html>
